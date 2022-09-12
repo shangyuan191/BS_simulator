@@ -1,5 +1,5 @@
 # 無線通訊網路 Term Project
-# <Base Station Simulator>
+# Base Station Simulator
 ## 基礎共同參數
 ### 地圖
 * #### 街區:10格*10格，每格長寬皆為2.5km，在程式中設定為50 pixel
