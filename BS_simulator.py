@@ -8,7 +8,7 @@ pygame.display.set_caption("BS_simulator")
 poisson_lambda=1/1440
 poisson_prob=float(((math.e)**(-poisson_lambda))*(poisson_lambda))
 prob_amplifier=10000
-Distance_scaler=0.05
+Distance_scaler=0.05  #1 pixel=50 meter, but the dB formula needs kilometer, so 1 pixel=0.05 kilometer
 radius=6
 FPS=60
 V=1
@@ -16,7 +16,7 @@ Pt=200
 BLOCK_SIZE=50
 BS_SIZE=30
 entropy=10
-Threshold=100
+threshold=100
 WIDTH = BLOCK_SIZE*10+10*11
 HEIGHT = BLOCK_SIZE*10+10*11
 AREA = (WIDTH+900, HEIGHT)
@@ -24,23 +24,10 @@ screen = pygame.display.set_mode(AREA)
 clock=pygame.time.Clock()
 running=True
 bg_image = pygame.image.load(os.path.join("image", "BS_2.png")).convert()
-car_image= pygame.image.load(os.path.join("image", "car.png")).convert()
 BLACK=(0,0,0)
 WHITE=(255,255,255)
 PURPLE=(160,32,240)
-expl_animation = {}
-expl_animation['large'] = []
-expl_animation['medium'] = []
-expl_animation['small'] = []
-expl_animation['player'] = []
-expl_animation['super'] = []
-for i in range(9):
-    expl_image = pygame.image.load(os.path.join("image", f"expl{i}.png")).convert()
-    expl_image.set_colorkey(BLACK)
-    expl_animation['large'].append(pygame.transform.scale(expl_image, (75, 75)))
-    expl_animation['medium'].append(pygame.transform.scale(expl_image, (40, 40)))
-    expl_animation['small'].append(pygame.transform.scale(expl_image, (15, 15)))
-    expl_animation['super'].append(pygame.transform.scale(expl_image, (200, 200)))
+RED=(255,0,0)
 X_animation={}
 X_animation['normal']=[]
 for i in range(1,4):
@@ -48,7 +35,6 @@ for i in range(1,4):
 	X_image.set_colorkey(BLACK)
 	X_animation['normal'].append(pygame.transform.scale(X_image, (20, 20)))
 font_name = pygame.font.match_font('arial')
-RED=(255,0,0)
 def draw_text(surf, text, size, x, y,color):
     font = pygame.font.Font(font_name, size)
     text_surface = font.render(text, True, color)
@@ -128,275 +114,104 @@ class BS(pygame.sprite.Sprite):
 			self.rect.x-=(BLOCK_SIZE/25)
 		elif bias==3:
 			self.rect.x+=(BLOCK_SIZE/25)
-class CAR_L_to_R(pygame.sprite.Sprite):
-	def __init__(self,x,y):
-		pygame.sprite.Sprite.__init__(self)
-		self.image=pygame.Surface((10,10))
-		self.image.fill((255,0,0))
-		self.rect = self.image.get_rect()
-		self.rect.x = x
-		self.rect.y = y
-		self.v=V
-		self.speedx=self.v
-		self.speedy=0
-		self.direct=1
-		self.position_x=float(self.rect.x)
-		self.position_y=float(self.rect.y)
-		self.DB_best_effort=0
-		self.DB_minimum_threshold=0
-		self.DB_entropy=0
-		self.DB_admission_nearby=0
-		self.BS_best_effort=-1
-		self.BS_minimum_threshold=-1
-		self.BS_entropy=-1
-		self.BS_admission_nearby=-1
-	def explosion_and_new_born(self):
-		expl_X = Explosion_X(self.rect.center, 'normal', 20)
-		all_sprites.add(expl_X)
-		carsprites.remove(self)
-		self.kill()
-	def update(self):
-		self.position_x+=self.speedx
-		self.position_y+=self.speedy
-		self.rect.x = round(self.position_x)
-		self.rect.y = round(self.position_y)
-		if self.rect.x >= WIDTH-10 or self.rect.x<0:
-			self.explosion_and_new_born()
-			
-		if self.rect.y >= HEIGHT-10 or self.rect.y<=0:
-			self.explosion_and_new_born()
-			
-		if self.rect.x%(BLOCK_SIZE+10)==0 and self.rect.y%(BLOCK_SIZE+10)==0 and self.rect.x!=0 and self.rect.x!=(BLOCK_SIZE*10) and self.rect.y!=0 and self.rect.y!=(BLOCK_SIZE*10):
-			#0:still the same  1~7:turn right  8~14:turn back  15~31:turn left
-			next_direct=random.randrange(0,32)
-			if next_direct==0:
-				self.direct+=2
-			elif next_direct>=1 and next_direct<=7:
-				self.direct+=1
-			elif next_direct>=8 and next_direct<=14:
-				self.direct+=3
-			elif next_direct>=15 and next_direct<=31:
-				self.direct+=0
-			self.direct%=4
-			if self.direct==0:
-				self.speedy=-self.v
-				self.speedx=0
-			elif self.direct==1:
-				self.speedx=self.v
-				self.speedy=0
-			elif self.direct==2:
-				self.speedx=0
-				self.speedy=self.v
-			elif self.direct==3:
-				self.speedx=-self.v
-				self.speedy=0
-    
-class CAR_R_to_L(pygame.sprite.Sprite):
-	def __init__(self,x,y):
-		pygame.sprite.Sprite.__init__(self)
-		self.image=pygame.Surface((10,10))
-		self.image.fill((0,255,0))
-		self.rect = self.image.get_rect()
-		self.rect.x = x
-		self.rect.y = y
-		self.v=V
-		self.speedx=-self.v
-		self.speedy=0
-		self.direct=3
-		self.position_x=float(self.rect.x)
-		self.position_y=float(self.rect.y)
-		self.DB_best_effort=0
-		self.DB_minimum_threshold=0
-		self.DB_entropy=0
-		self.DB_admission_nearby=0
-		self.BS_best_effort=-1
-		self.BS_minimum_threshold=-1
-		self.BS_entropy=-1
-		self.BS_admission_nearby=-1
-	def explosion_and_new_born(self):
-		expl_X = Explosion_X(self.rect.center, 'normal', 20)
-		all_sprites.add(expl_X)
-		carsprites.remove(self)
-		self.kill()
+class Car(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction, color):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((10, 10))
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.v = V
+        self.position_x = float(self.rect.x)
+        self.position_y = float(self.rect.y)
 
+        # Set direction and speed based on the direction
+        self.direction = direction
+        if self.direction == 0:  # Down to Up
+            self.speedx = 0
+            self.speedy = -self.v
+        elif self.direction == 1:  # Left to Right
+            self.speedx = self.v
+            self.speedy = 0
+        elif self.direction == 2:  # Up to Down
+            self.speedx = 0
+            self.speedy = self.v
+        elif self.direction == 3:  # Right to Left
+            self.speedx = -self.v
+            self.speedy = 0
 
-	def update(self):
-		self.position_x+=self.speedx
-		self.position_y+=self.speedy
-		self.rect.x = round(self.position_x)
-		self.rect.y = round(self.position_y)
-		if self.rect.x >= WIDTH-10 or self.rect.x<=0:
-			self.explosion_and_new_born()
-			
-		if self.rect.y >= HEIGHT-10 or self.rect.y<=0:
+        self.DB_best_effort = 0
+        self.DB_minimum_threshold = 0
+        self.DB_entropy = 0
+        self.DB_admission_nearby = 0
+        self.BS_best_effort = -1
+        self.BS_minimum_threshold = -1
+        self.BS_entropy = -1
+        self.BS_admission_nearby = -1
 
-			self.explosion_and_new_born()
-		if self.rect.x%(BLOCK_SIZE+10)==0 and self.rect.y%(BLOCK_SIZE+10)==0 and self.rect.x!=0 and self.rect.x!=(BLOCK_SIZE*10) and self.rect.y!=0 and self.rect.y!=(BLOCK_SIZE*10):
-			#0:still the same  1~7:turn right  8~14:turn back  15~31:turn left
-			next_direct=random.randrange(0,32)
-			if next_direct==0:
-				self.direct+=2
-			elif next_direct>=1 and next_direct<=7:
-				self.direct+=1
-			elif next_direct>=8 and next_direct<=14:
-				self.direct+=3
-			elif next_direct>=15 and next_direct<=31:
-				self.direct+=0
-			self.direct%=4
-			if self.direct==0:
-				self.speedy=-self.v
-				self.speedx=0
-			elif self.direct==1:
-				self.speedx=self.v
-				self.speedy=0
-			elif self.direct==2:
-				self.speedx=0
-				self.speedy=self.v
-			elif self.direct==3:
-				self.speedx=-self.v
-				self.speedy=0
+    def explosion_and_new_born(self):
+        expl_X = Explosion_X(self.rect.center, 'normal', 20)
+        all_sprites.add(expl_X)
+        if self in carsprites:
+            carsprites.remove(self)
+        self.kill()
 
-class CAR_U_to_D(pygame.sprite.Sprite):
-	def __init__(self,x,y):
-		pygame.sprite.Sprite.__init__(self)
-		self.image=pygame.Surface((10,10))
-		self.image.fill((0,255,255))
-		self.rect = self.image.get_rect()
-		self.rect.x = x
-		self.rect.y = y
-		self.v=V
-		self.direct=2
-		self.speedx=0
-		self.speedy=self.v
-		self.DB_best_effort=0
-		self.DB_minimum_threshold=0
-		self.DB_entropy=0
-		self.DB_admission_nearby=0
-		self.BS_best_effort=-1
-		self.BS_minimum_threshold=-1
-		self.BS_entropy=-1
-		self.BS_admission_nearby=-1
-		self.position_x=float(self.rect.x)
-		self.position_y=float(self.rect.y)
-	def explosion_and_new_born(self):
-		expl_X = Explosion_X(self.rect.center, 'normal', 20)
-		all_sprites.add(expl_X)
-		carsprites.remove(self)
-		self.kill()
+    def update(self):
+        self.position_x += self.speedx
+        self.position_y += self.speedy
+        self.rect.x = round(self.position_x)
+        self.rect.y = round(self.position_y)
 
-	def update(self):
-		self.position_x+=self.speedx
-		self.position_y+=self.speedy
-		self.rect.x = round(self.position_x)
-		self.rect.y = round(self.position_y)
-		if self.rect.x >= WIDTH-10 or self.rect.x<=0:
-			self.explosion_and_new_born()
-		if self.rect.y >= HEIGHT-10 or self.rect.y<0:
-			self.explosion_and_new_born()
-		if self.rect.x%(BLOCK_SIZE+10)==0 and self.rect.y%(BLOCK_SIZE+10)==0 and self.rect.x!=0 and self.rect.x!=(BLOCK_SIZE*10) and self.rect.y!=0 and self.rect.y!=(BLOCK_SIZE*10):
-			#0:still the same  1~7:turn right  8~14:turn back  15~31:turn left
-			next_direct=random.randrange(0,32)
-			if next_direct==0:
-				self.direct+=2
-			elif next_direct>=1 and next_direct<=7:
-				self.direct+=1
-			elif next_direct>=8 and next_direct<=14:
-				self.direct+=3
-			elif next_direct>=15 and next_direct<=31:
-				self.direct+=0
-			self.direct%=4
-			if self.direct==0:
-				self.speedy=-self.v
-				self.speedx=0
-			elif self.direct==1:
-				self.speedx=self.v
-				self.speedy=0
-			elif self.direct==2:
-				self.speedx=0
-				self.speedy=self.v
-			elif self.direct==3:
-				self.speedx=-self.v
-				self.speedy=0        
-       
-class CAR_D_to_U(pygame.sprite.Sprite):
-	def __init__(self,x,y):
-		pygame.sprite.Sprite.__init__(self)
-		self.image=pygame.Surface((10,10))
-		self.image.fill((255,255,0))
-		self.rect = self.image.get_rect()
-		self.rect.x = x
-		self.rect.y = y
-		self.v=V
-		self.direct=0
-		self.speedx=0
-		self.DB_best_effort=0
-		self.DB_minimum_threshold=0
-		self.DB_entropy=0
-		self.DB_admission_nearby=0
-		self.BS_best_effort=-1
-		self.BS_minimum_threshold=-1
-		self.BS_entropy=-1
-		self.BS_admission_nearby=-1
-		self.speedy=-self.v
-		self.position_x=float(self.rect.x)
-		self.position_y=float(self.rect.y)
-	def explosion_and_new_born(self):
-		expl_X = Explosion_X(self.rect.center, 'normal', 20)
-		all_sprites.add(expl_X)
-		carsprites.remove(self)
-		self.kill()  
+        if self.rect.x >= WIDTH - 10 or self.rect.x <= 0 or self.rect.y >= HEIGHT - 10 or self.rect.y <= 0:
+            self.explosion_and_new_born()
 
-	def update(self):
-		self.position_x+=self.speedx
-		self.position_y+=self.speedy
-		self.rect.x = round(self.position_x)
-		self.rect.y = round(self.position_y)
-		if self.rect.x >= WIDTH-10 or self.rect.x<=0:
-			self.explosion_and_new_born()
-		if self.rect.y >= HEIGHT-10 or self.rect.y<=0:
-			self.explosion_and_new_born()
-		if self.rect.x%(BLOCK_SIZE+10)==0 and self.rect.y%(BLOCK_SIZE+10)==0 and self.rect.x!=0 and self.rect.x!=(BLOCK_SIZE*10) and self.rect.y!=0 and self.rect.y!=(BLOCK_SIZE*10):
-			#0:still the same  1~7:turn right  8~14:turn back  15~31:turn left
-			next_direct=random.randrange(0,32)
-			if next_direct==0:
-				self.direct+=2
-			elif next_direct>=1 and next_direct<=7:
-				self.direct+=1
-			elif next_direct>=8 and next_direct<=14:
-				self.direct+=3
-			elif next_direct>=15 and next_direct<=31:
-				self.direct+=0
-			self.direct%=4
-			if self.direct==0:
-				self.speedy=-self.v
-				self.speedx=0
-			elif self.direct==1:
-				self.speedx=self.v
-				self.speedy=0
-			elif self.direct==2:
-				self.speedx=0
-				self.speedy=self.v
-			elif self.direct==3:
-				self.speedx=-self.v
-				self.speedy=0
-          
+        if self.rect.x % (BLOCK_SIZE + 10) == 0 and self.rect.y % (BLOCK_SIZE + 10) == 0 and self.rect.x != 0 and self.rect.x != (BLOCK_SIZE * 10) and self.rect.y != 0 and self.rect.y != (BLOCK_SIZE * 10):
+            next_direct = random.randrange(0, 32)
+			#0~15:still the same  16~22:turn left  23~29:turn right  30~31:turn back         
+            if next_direct >= 0 and next_direct <= 15:
+                self.direction += 0
+            elif next_direct >= 16 and next_direct <= 22:
+                self.direction += 3
+            elif next_direct >= 23 and next_direct <= 29:
+                self.direction += 1
+            elif next_direct >= 30 and next_direct <= 31:
+                self.direction += 2
+            self.direction %= 4
+
+            # Update speed based on the new direction
+            if self.direction == 0:  # Up to Down
+                self.speedy = self.v
+                self.speedx = 0
+            elif self.direction == 1:  # Left to Right
+                self.speedx = self.v
+                self.speedy = 0
+            elif self.direction == 2:  # Down to Up
+                self.speedx = 0
+                self.speedy = -self.v
+            elif self.direction == 3:  # Right to Left
+                self.speedx = -self.v
+                self.speedy = 0
+
 carsprites=[]
 BS_sprites=[]
 switch_count_best_effort=0
 switch_count_minimum_threshold=0
 switch_count_entropy=0
 switch_count_admission_nearby=0
-all_sprites = pygame.sprite.Group()      
-for i in range(10):
-	for j in range(10): 
-		bg = BG((((BLOCK_SIZE+10)*i)+10),(((BLOCK_SIZE+10)*j)+10))
-		all_sprites.add(bg)
-		bsrand = random.randrange(0, 10000)
-		if bsrand%10==0:
-			bs = BS((((BLOCK_SIZE+10)*i)+10),(((BLOCK_SIZE+10)*j)+10))
-			all_sprites.add(bs)
-			bs.DBpower=random.randrange(1,11)*100
-			BS_sprites.append(bs)
+all_sprites = pygame.sprite.Group()
+
+def BG_and_BS_create_func():
+	for i in range(10):
+		for j in range(10): 
+			bg = BG((((BLOCK_SIZE+10)*i)+10),(((BLOCK_SIZE+10)*j)+10))
+			all_sprites.add(bg)
+			bsrand = random.randrange(0, 10000)
+			if bsrand%10==0:
+				bs = BS((((BLOCK_SIZE+10)*i)+10),(((BLOCK_SIZE+10)*j)+10))
+				all_sprites.add(bs)
+				bs.DBpower=random.randrange(1,11)*100
+				BS_sprites.append(bs)
 
 def car_create(car):
 	all_sprites.add(car)
@@ -447,22 +262,23 @@ def car_create(car):
 def car_create_func():
 	for i in range(1,10):
 		if random.randrange(0,prob_amplifier)<=poisson_prob*prob_amplifier:
-			car_LR=CAR_L_to_R(0,(BLOCK_SIZE+10)*i)
-			car_create(car_LR)
+			car=Car(0,(BLOCK_SIZE+10)*i,1,(255,0,0))
+			car_create(car)
 		if random.randrange(0,prob_amplifier)<=poisson_prob*prob_amplifier:
-			car_RL=CAR_R_to_L((BLOCK_SIZE+10)*10,(BLOCK_SIZE+10)*i)
-			car_create(car_RL)
+			car=Car((BLOCK_SIZE+10)*10,(BLOCK_SIZE+10)*i,3,(0,255,0))
+			car_create(car)
 		if random.randrange(0,prob_amplifier)<=poisson_prob*prob_amplifier:
-			car_UD=CAR_U_to_D((BLOCK_SIZE+10)*i,0)
-			car_create(car_UD)
+			car=Car((BLOCK_SIZE+10)*i,0,2,(0,255,255))
+			car_create(car)
 		if random.randrange(0,prob_amplifier)<=poisson_prob*prob_amplifier:
-			car_DU=CAR_D_to_U((BLOCK_SIZE+10)*i,(BLOCK_SIZE+10)*10)
-			car_create(car_DU)
+			car=Car((BLOCK_SIZE+10)*i,(BLOCK_SIZE+10)*10,0,(255,255,0))
+			car_create(car)
 
 
 
 tme=0
 mode=0
+BG_and_BS_create_func()
 car_create_func()
 while running:
 	clock.tick(FPS)
@@ -500,11 +316,7 @@ while running:
 	draw_text(screen,"Total car:"+str(len(carsprites)),18,(BLOCK_SIZE+10)*10+100,HEIGHT-50,BLACK)
 	draw_text(screen,"view mode =>   0:all_mode     1:best_effort     2:minimum_threshold     3:entropy    4:admission_nearby",20,(BLOCK_SIZE+10)*10+450,HEIGHT-15,(230,0,255))
 	for i in range(len(carsprites)):
-
 		number_of_calling_car+=1
-
-
-
 		DB_MAX=carsprites[i].DB_best_effort
 		strongest_bs=carsprites[i].BS_best_effort
 		for j in range(len(BS_sprites)):
@@ -532,7 +344,7 @@ while running:
 
 		DB_now=carsprites[i].DB_minimum_threshold
 		BS_now=carsprites[i].BS_minimum_threshold
-		if carsprites[i].DB_minimum_threshold<Threshold:
+		if carsprites[i].DB_minimum_threshold<threshold:
 			for j in range(len(BS_sprites)):
 				dis=calculate_dis(carsprites[i].rect.centerx,carsprites[i].rect.centery,BS_sprites[j].rect.centerx,BS_sprites[j].rect.centery)
 				DB=calculate_DB(BS_sprites[j].DBpower,dis*Distance_scaler)
@@ -623,14 +435,16 @@ while running:
 		draw_text(screen,"Best Effort",18,(BLOCK_SIZE+10)*10+300,20,BLACK)
 		draw_text(screen,"Switch Times:"+str(switch_count_best_effort),18,(BLOCK_SIZE+10)*10+300,HEIGHT-50,BLACK)
 	if mode==0 or mode==2:
-		draw_text(screen,"Minimum THreshold",18,(BLOCK_SIZE+10)*10+450,20,BLACK)
+		draw_text(screen,"Minimum threshold",18,(BLOCK_SIZE+10)*10+450,20,BLACK)
 		draw_text(screen,"Switch Times:"+str(switch_count_minimum_threshold),18,(BLOCK_SIZE+10)*10+450,HEIGHT-50,BLACK)
 	if mode==0 or mode==3:
 		draw_text(screen,"Entropy",18,(BLOCK_SIZE+10)*10+600,20,BLACK)
 		draw_text(screen,"Switch Times:"+str(switch_count_entropy),18,(BLOCK_SIZE+10)*10+600,HEIGHT-50,BLACK)
 	if mode==0 or mode==4:
 		draw_text(screen,"Admission Nearby",18,(BLOCK_SIZE+10)*10+750,20,BLACK)
-		draw_text(screen,"Switch Times:"+str(switch_count_admission_nearby),18,(BLOCK_SIZE+10)*10+750,HEIGHT-50,BLACK) 
+		draw_text(screen,"Switch Times:"+str(switch_count_admission_nearby),18,(BLOCK_SIZE+10)*10+750,HEIGHT-50,BLACK)
+
+
 
 
   
