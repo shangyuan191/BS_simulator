@@ -6,6 +6,7 @@ import random
 
 class Game:
     def __init__(self):
+        # Initialize Pygame and set up game window
         pygame.init()
         pygame.display.set_caption("BS_simulator")
         self.config = config.Config()
@@ -16,6 +17,7 @@ class Game:
         self.all_sprites = pygame.sprite.Group()
         self.carsprites=[]
         self.BS_sprites=[]
+        # Tracking metrics and mode settings
         self.tme=0
         self.mode=0
         self.switch_count_best_effort=0
@@ -28,6 +30,7 @@ class Game:
 
     def load_image(self):
         # # Assets
+        # Load and set up images for background and animations
         self.bg_image = pygame.image.load("../image/BS_2.png").convert()
         self.X_animation = {
             'normal': [pygame.transform.scale(
@@ -49,9 +52,10 @@ class Game:
         text_rect.centerx = x
         text_rect.centery = y
         surf.blit(text_surface, text_rect)
+    # Calculate the Euclidean distance between two points
     def calculate_dis(self,car_x, car_y, bs_x, bs_y):
         return math.sqrt((car_x - bs_x) ** 2 + (car_y - bs_y) ** 2)
-
+    # Calculate the dB value based on distance and base station power
     def calculate_DB(self,freq, dis):
         return self.config.PT - (32.45 + 20 * math.log(freq, 10) + 20 * math.log(dis, 10))
     def BG_and_BS_create_func(self):
@@ -65,10 +69,11 @@ class Game:
                     self.all_sprites.add(bs)
                     bs.DBpower=random.randrange(1,11)*100
                     self.BS_sprites.append(bs)
-
+    # Create and assign properties to a car object
     def car_create(self,car):
         self.all_sprites.add(car)
         self.carsprites.append(car)
+        # Determine the best base station based on signal strength
         DB_MAX=-1
         strongest_bs=-1
         for j in range(len(self.BS_sprites)):
@@ -156,7 +161,7 @@ class Game:
             self.update_minimum_threshold(car)
             self.update_entropy(car)
             self.update_admission_nearby(car)
-
+     # Update car connection using "best effort" strategy
     def update_best_effort(self,car):
         DB_MAX = car.DB_best_effort
         strongest_bs = car.BS_best_effort
